@@ -10,6 +10,7 @@ import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.Surface;
 
 import com.seu.magicfilter.base.gpuimage.GPUImageFilter;
@@ -31,6 +32,7 @@ import javax.microedition.khronos.opengles.GL10;
  */
 public class SrsCameraView extends GLSurfaceView implements GLSurfaceView.Renderer {
 
+    private static final String TAG = "SrsCameraView";
     private GPUImageFilter magicFilter;
     private SurfaceTexture surfaceTexture;
     private int mOESTextureId = OpenGLUtils.NO_TEXTURE;

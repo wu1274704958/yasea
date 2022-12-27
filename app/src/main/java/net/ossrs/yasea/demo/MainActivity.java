@@ -9,6 +9,8 @@ import android.hardware.Camera;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -19,10 +21,14 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ScrollView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.github.faucamp.simplertmp.RtmpHandler;
 import com.seu.magicfilter.utils.MagicFilterType;
+import com.wws.remotecamad.OnGetError;
+import com.wws.remotecamad.RemoteCamAgent;
 
 import net.ossrs.yasea.SrsCameraView;
 import net.ossrs.yasea.SrsEncodeHandler;
@@ -30,6 +36,7 @@ import net.ossrs.yasea.SrsPublisher;
 import net.ossrs.yasea.SrsRecordHandler;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.net.SocketException;
 import java.util.Random;
 
@@ -38,6 +45,7 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
 
     private static final String TAG = "Yasea";
     public final static int RC_CAMERA = 100;
+    private static final String CMD_SAVE_TAG = "CMD_SAVE_TAG";
 
     private Button btnPublish;
     private Button btnSwitchCamera;
@@ -46,7 +54,7 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
     private Button btnPause;
 
     private SharedPreferences sp;
-    private String rtmpUrl = "rtmp://ossrs.net/" + getRandomAlphaString(3) + '/' + getRandomAlphaDigitString(5);
+    private String rtmpUrl = "rtmp://129.211.8.222/live/livestream";//"rtmp://ossrs.net/" + getRandomAlphaString(3) + '/' + getRandomAlphaDigitString(5);
     private String recPath = Environment.getExternalStorageDirectory().getPath() + "/test.mp4";
 
     private SrsPublisher mPublisher;
@@ -55,6 +63,13 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
     private int mWidth = 640;
     private int mHeight = 480;
     private boolean isPermissionGranted = false;
+    ////////////////////////////////
+    private MyHandle myHandle;
+    private RemoteCamAgent agent;
+    private ScrollView m_Scroll;
+    private TextView m_logTx;
+    private EditText m_agent_url;
+    private Button m_agent_btn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,6 +82,16 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR);
 
         requestPermission();
+
+        myHandle = new MyHandle(this);
+        agent = new RemoteCamAgent(this,myHandle);
+        agent.registe();
+        agent.setOnGetError(new OnGetError() {
+            @Override
+            public void OnError(int code) {
+                agent.sendLog("error : " + code,0);
+            }
+        });
     }
 
     private void requestPermission() {
@@ -113,10 +138,11 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
         btnPublish = (Button) findViewById(R.id.publish);
         btnSwitchCamera = (Button) findViewById(R.id.swCam);
         btnRecord = (Button) findViewById(R.id.record);
-        btnSwitchEncoder = (Button) findViewById(R.id.swEnc);
+        //btnSwitchEncoder = (Button) findViewById(R.id.swEnc);
         btnPause = (Button) findViewById(R.id.pause);
         btnPause.setEnabled(false);
         mCameraView = (SrsCameraView) findViewById(R.id.glsurfaceview_camera);
+        initAgent();
 
         mPublisher = new SrsPublisher(mCameraView);
         mPublisher.setEncodeHandler(new SrsEncodeHandler(this));
@@ -215,6 +241,46 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
                 }
             }
         });
+    }
+
+    private void initAgent() {
+        m_Scroll = (ScrollView)findViewById(R.id.scroll);
+        m_logTx = (TextView)findViewById(R.id.log_tx);
+        m_agent_url = (EditText)findViewById(R.id.agent_url);
+        m_agent_btn = (Button) findViewById(R.id.agent_btn);
+
+        m_agent_url.setText(GetSavedCmd(m_agent_url.getText().toString()));
+        m_agent_btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String cmd = m_agent_url.getText().toString();
+                agent.launch(cmd);
+                SaveCmd(cmd);
+            }
+        });
+    }
+    public void log(String str)
+    {
+        if(m_logTx.getLineCount() >= m_logTx.getMaxLines())
+            m_logTx.setText("");
+        if(str.length() > 0 && str.charAt(str.length() - 1) != '\n')
+            str += '\n';
+        m_logTx.append(str);
+        m_Scroll.fullScroll(View.FOCUS_DOWN);
+    }
+
+    private String GetSavedCmd(String def)
+    {
+        SharedPreferences a = getSharedPreferences(CMD_SAVE_TAG,MODE_PRIVATE);
+        return a.getString("cmd",def);
+    }
+
+    private void SaveCmd(String cmd)
+    {
+        SharedPreferences a = getSharedPreferences(CMD_SAVE_TAG,MODE_PRIVATE);
+        SharedPreferences.Editor ed = a.edit();
+        ed.putString("cmd",cmd);
+        ed.apply();
     }
 
     @Override
@@ -317,6 +383,8 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
         super.onDestroy();
         mPublisher.stopPublish();
         mPublisher.stopRecord();
+        agent.unregiste();
+        agent = null;
     }
 
     @Override
@@ -489,6 +557,34 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
     @Override
     public void onEncodeIllegalArgumentException(IllegalArgumentException e) {
         handleException(e);
+    }
+/////////////////////远程代理逻辑///////////////////////////////////
+    private static class MyHandle extends Handler {
+        WeakReference<MainActivity> mainActivityWeakReference;
+        public MyHandle(MainActivity activity)
+        {
+            mainActivityWeakReference = new WeakReference<>(activity);
+        }
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.arg1)
+            {
+                case 1:
+                    Runnable r = (Runnable) msg.obj;
+                    if(r != null)
+                        r.run();
+                    break;
+                case 2:
+                    String logStr = (String) msg.obj;
+                    if(logStr != null)
+                    {
+                        MainActivity activity = mainActivityWeakReference.get();
+                        if(activity != null)
+                            activity.log(logStr);
+                    }
+                    break;
+            }
+        }
     }
 
 }

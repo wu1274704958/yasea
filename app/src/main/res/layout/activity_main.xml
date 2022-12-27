@@ -48,15 +48,15 @@
         android:layout_alignBottom="@+id/publish"
         android:layout_toRightOf="@id/swCam" />
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="soft encoder"
-        android:id="@+id/swEnc"
-        android:layout_alignBottom="@+id/publish"
-        android:layout_toRightOf="@id/record"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true"/>
+<!--    <Button-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="soft encoder"-->
+<!--        android:id="@+id/swEnc"-->
+<!--        android:layout_alignBottom="@+id/publish"-->
+<!--        android:layout_toRightOf="@id/record"-->
+<!--        android:layout_alignParentRight="true"-->
+<!--        android:layout_alignParentEnd="true"/>-->
 
     <EditText
         android:layout_width="wrap_content"
@@ -64,5 +64,38 @@
         android:textSize="14dp"
         android:id="@+id/url"
         android:textColor="@color/accent_material_light" />
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="-i 127.0.0.1  -b 8081 -p 8080 -a wws -s 31726"
+        android:textSize="14dp"
+        android:id="@+id/agent_url"
+        android:textColor="@color/accent_material_light"
+        android:layout_toEndOf="@id/pause"
+        android:layout_alignTop="@id/pause"
+        />
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="14dp"
+        android:id="@+id/agent_btn"
+        android:text="go"
+        android:textColor="@color/accent_material_light"
+        android:layout_toEndOf="@id/record"
+        android:layout_alignTop="@id/record"
+        />
+
+    <ScrollView
+        android:id="@+id/scroll"
+        android:layout_width="match_parent"
+        android:layout_height="500dp"
+        android:layout_above="@id/agent_url">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:maxLines="2000"
+            android:id="@+id/log_tx"
+            />
+    </ScrollView>
 
 </RelativeLayout>
