@@ -625,7 +625,16 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
         }
         return object.toString();
     }
-    public void exec_cmd(String cmd)
+    public void exec_cmd(final String cmd)
+    {
+        agent.RunUIThread(new Runnable() {
+            @Override
+            public void run() {
+                exec_cmd_real(cmd);
+            }
+        });
+    }
+    public void exec_cmd_real(String cmd)
     {
         switch (cmd)
         {
@@ -647,7 +656,16 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
             }
         }
     }
-    public void set_agent_data(String key,String val)
+    public void set_agent_data(final String key, final String val)
+    {
+        agent.RunUIThread(new Runnable() {
+            @Override
+            public void run() {
+                set_agent_data_real(key,val);
+            }
+        });
+    }
+    public void set_agent_data_real(String key,String val)
     {
         switch (key)
         {
