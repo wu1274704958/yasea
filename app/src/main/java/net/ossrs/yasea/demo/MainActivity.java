@@ -1,6 +1,7 @@
 package net.ossrs.yasea.demo;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
@@ -18,6 +19,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
@@ -34,6 +36,9 @@ import net.ossrs.yasea.SrsCameraView;
 import net.ossrs.yasea.SrsEncodeHandler;
 import net.ossrs.yasea.SrsPublisher;
 import net.ossrs.yasea.SrsRecordHandler;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -60,8 +65,8 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
     private SrsPublisher mPublisher;
     private SrsCameraView mCameraView;
 
-    private int mWidth = 640;
-    private int mHeight = 480;
+    private int mWidth = 1920;
+    private int mHeight = 1080;
     private boolean isPermissionGranted = false;
     ////////////////////////////////
     private MyHandle myHandle;
@@ -70,11 +75,12 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
     private TextView m_logTx;
     private EditText m_agent_url;
     private Button m_agent_btn;
+    private EditText efu;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        hideStatusBar(this);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_main);
 
@@ -132,26 +138,18 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
         rtmpUrl = sp.getString("rtmpUrl", rtmpUrl);
 
         // initialize url.
-        final EditText efu = (EditText) findViewById(R.id.url);
+        efu = (EditText) findViewById(R.id.url);
         efu.setText(rtmpUrl);
 
         btnPublish = (Button) findViewById(R.id.publish);
         btnSwitchCamera = (Button) findViewById(R.id.swCam);
         btnRecord = (Button) findViewById(R.id.record);
-        //btnSwitchEncoder = (Button) findViewById(R.id.swEnc);
+        btnSwitchEncoder = (Button) findViewById(R.id.swEnc);
         btnPause = (Button) findViewById(R.id.pause);
         btnPause.setEnabled(false);
         mCameraView = (SrsCameraView) findViewById(R.id.glsurfaceview_camera);
         initAgent();
-
-        mPublisher = new SrsPublisher(mCameraView);
-        mPublisher.setEncodeHandler(new SrsEncodeHandler(this));
-        mPublisher.setRtmpHandler(new RtmpHandler(this));
-        mPublisher.setRecordHandler(new SrsRecordHandler(this));
-        mPublisher.setPreviewResolution(mWidth, mHeight);
-        mPublisher.setOutputResolution(mHeight, mWidth); // 这里要和preview反过来
-        mPublisher.setVideoHDMode();
-        mPublisher.startCamera();
+        initPublisher();
 
         mCameraView.setCameraCallbacksHandler(new SrsCameraView.CameraCallbacksHandler(){
             @Override
@@ -165,50 +163,21 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
         btnPublish.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (btnPublish.getText().toString().contentEquals("publish")) {
-                    rtmpUrl = efu.getText().toString();
-                    SharedPreferences.Editor editor = sp.edit();
-                    editor.putString("rtmpUrl", rtmpUrl);
-                    editor.apply();
-
-                    mPublisher.startPublish(rtmpUrl);
-                    mPublisher.startCamera();
-
-                    if (btnSwitchEncoder.getText().toString().contentEquals("soft encoder")) {
-                        Toast.makeText(getApplicationContext(), "Use hard encoder", Toast.LENGTH_SHORT).show();
-                    } else {
-                        Toast.makeText(getApplicationContext(), "Use soft encoder", Toast.LENGTH_SHORT).show();
-                    }
-                    btnPublish.setText("stop");
-                    btnSwitchEncoder.setEnabled(false);
-                    btnPause.setEnabled(true);
-                } else if (btnPublish.getText().toString().contentEquals("stop")) {
-                    mPublisher.stopPublish();
-                    mPublisher.stopRecord();
-                    btnPublish.setText("publish");
-                    btnRecord.setText("record");
-                    btnSwitchEncoder.setEnabled(true);
-                    btnPause.setEnabled(false);
-                }
+                OnClickPublish();
             }
         });
         btnPause.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(btnPause.getText().toString().equals("Pause")){
-                    mPublisher.pausePublish();
-                    btnPause.setText("resume");
-                }else{
-                    mPublisher.resumePublish();
-                    btnPause.setText("Pause");
-                }
+                OnClickPause();
             }
         });
 
         btnSwitchCamera.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mPublisher.switchCameraFace((mPublisher.getCameraId() + 1) % Camera.getNumberOfCameras());
+                OnClickSwitch();
+                mCameraView.setVisibility(View.INVISIBLE);
             }
         });
 
@@ -241,6 +210,60 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
                 }
             }
         });
+    }
+
+    private void initPublisher() {
+        mPublisher = new SrsPublisher(mCameraView);
+        mPublisher.setEncodeHandler(new SrsEncodeHandler(this));
+        mPublisher.setRtmpHandler(new RtmpHandler(this));
+        mPublisher.setRecordHandler(new SrsRecordHandler(this));
+        mPublisher.setPreviewResolution(mWidth, mHeight);
+        mPublisher.setOutputResolution(mHeight, mWidth); // 这里要和preview反过来
+        mPublisher.setVideoHDMode();
+    }
+
+    private void OnClickSwitch() {
+        mPublisher.switchCameraFace((mPublisher.getCameraId() + 1) % Camera.getNumberOfCameras());
+    }
+
+    private void OnClickPause() {
+        if(btnPause.getText().toString().equals("Pause")){
+            mPublisher.pausePublish();
+            btnPause.setText("resume");
+        }else{
+            mPublisher.resumePublish();
+            btnPause.setText("Pause");
+        }
+    }
+
+    private void OnClickPublish() {
+        if (btnPublish.getText().toString().contentEquals("publish")) {
+            rtmpUrl = efu.getText().toString();
+            SharedPreferences.Editor editor = sp.edit();
+            editor.putString("rtmpUrl", rtmpUrl);
+            editor.apply();
+
+            mPublisher.startPublish(rtmpUrl);
+            mPublisher.startCamera();
+
+            if (btnSwitchEncoder.getText().toString().contentEquals("soft encoder")) {
+                Toast.makeText(getApplicationContext(), "Use hard encoder", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(getApplicationContext(), "Use soft encoder", Toast.LENGTH_SHORT).show();
+            }
+            btnPublish.setText("stop");
+            btnSwitchEncoder.setEnabled(false);
+            btnPause.setEnabled(true);
+            mCameraView.setVisibility(View.VISIBLE);
+        } else if (btnPublish.getText().toString().contentEquals("stop")) {
+            mPublisher.stopPublish();
+            mPublisher.stopRecord();
+            btnPublish.setText("publish");
+            btnRecord.setText("record");
+            btnSwitchEncoder.setEnabled(true);
+            btnPause.setEnabled(false);
+            mCameraView.setVisibility(View.GONE);
+        }
     }
 
     private void initAgent() {
@@ -585,6 +608,92 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
                     break;
             }
         }
+    }
+
+    public String GetAgentData()
+    {
+        JSONObject object = new JSONObject();
+        try {
+            object.put("url",efu.getText().toString());
+            object.put("cam",mPublisher.getCameraId());
+            object.put("publish_st",btnPublish.getText());
+            object.put("pause_st",btnPause.getText());
+            object.put("w",mWidth);
+            object.put("h",mHeight);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return object.toString();
+    }
+    public void exec_cmd(String cmd)
+    {
+        switch (cmd)
+        {
+            case "publish":
+                OnClickPublish();
+                break;
+            case "pause":
+                OnClickPause();
+                break;
+            case "switch":
+                OnClickSwitch();
+                break;
+            case "reinitcam":
+            {
+                if(btnPublish.getText().toString().contains("stop"))
+                    OnClickPublish();
+                initPublisher();
+                break;
+            }
+        }
+    }
+    public void set_agent_data(String key,String val)
+    {
+        switch (key)
+        {
+            case "url":
+                efu.setText(val);
+                break;
+            case "cam":
+                try {
+                    int a = Integer.parseInt(val);
+                    mPublisher.switchCameraFace(a % Camera.getNumberOfCameras());
+                }catch (Exception e)
+                {
+                    log(e.getMessage());
+                }
+                break;
+            case "w":
+                try {
+                    int a = Integer.parseInt(val);
+                    mWidth = a;
+                }catch (Exception e)
+                {
+                    log(e.getMessage());
+                }
+                break;
+            case "h":
+                try {
+                    int a = Integer.parseInt(val);
+                    mHeight = a;
+                }catch (Exception e)
+                {
+                    log(e.getMessage());
+                }
+                break;
+        }
+    }
+
+    public static void hideStatusBar(Activity activity) {
+        if (activity == null) return;
+        Window window = activity.getWindow();
+        if (window == null) return;
+        window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        window.getDecorView()
+                .setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+        WindowManager.LayoutParams lp = window.getAttributes();
+        window.setAttributes(lp);
     }
 
 }
