@@ -70,7 +70,7 @@
     <EditText
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="-i 127.0.0.1  -b 8081 -p 8080 -a wws -s 31726"
+        android:text="-i 129.211.8.222 -b 8081 -p 8082 -a wws -s 31726"
         android:textSize="14dp"
         android:id="@+id/agent_url"
         android:textColor="@color/accent_material_light"
