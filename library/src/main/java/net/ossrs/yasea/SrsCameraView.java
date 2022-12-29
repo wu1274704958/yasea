@@ -59,6 +59,7 @@ public class SrsCameraView extends GLSurfaceView implements GLSurfaceView.Render
     private ConcurrentLinkedQueue<IntBuffer> mGLIntBufferCache = new ConcurrentLinkedQueue<>();
     private PreviewCallback mPrevCb;
     private CameraCallbacksHandler cameraCallbacksHandler = new CameraCallbacksHandler();
+    private boolean NoPreview = true;
 
     public SrsCameraView(Context context) {
         this(context, null);
@@ -131,7 +132,7 @@ public class SrsCameraView extends GLSurfaceView implements GLSurfaceView.Render
         }        
         
         GLES20.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
+        if(!NoPreview)GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
 
         surfaceTexture.updateTexImage();
 
@@ -139,6 +140,7 @@ public class SrsCameraView extends GLSurfaceView implements GLSurfaceView.Render
         Matrix.multiplyMM(mTransformMatrix, 0, mSurfaceMatrix, 0, mProjectionMatrix, 0);
         magicFilter.setTextureTransformMatrix(mTransformMatrix);
         magicFilter.onDrawFrame(mOESTextureId);
+        if(NoPreview)GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
 
         if (mIsEncoding) {           
             mGLIntBufferCache.add(magicFilter.getGLFboBuffer());                       

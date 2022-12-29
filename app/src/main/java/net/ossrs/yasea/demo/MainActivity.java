@@ -178,7 +178,6 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
             @Override
             public void onClick(View v) {
                 OnClickSwitch();
-                mCameraView.setVisibility(View.INVISIBLE);
             }
         });
 
