@@ -33,6 +33,16 @@ public class SrsPublisher {
     private SrsMp4Muxer mMp4Muxer;
     private SrsEncoder mEncoder;
 
+    public int getmBitRate() {
+        return mBitRate;
+    }
+
+    public void setmBitRate(int mBitRate) {
+        this.mBitRate = mBitRate;
+    }
+
+    private int mBitRate = 1200;
+
     public SrsPublisher(SrsCameraView view) {
         mCameraView = view;
         mCameraView.setPreviewCallback(new SrsCameraView.PreviewCallback() {
@@ -281,7 +291,7 @@ public class SrsPublisher {
     }
 
     public void setVideoHDMode() {
-        mEncoder.setVideoHDMode();
+        mEncoder.setVideoHDMode(mBitRate);
     }
 
     public void setVideoSmoothMode() {

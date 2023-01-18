@@ -60,6 +60,8 @@ public class SrsCameraView extends GLSurfaceView implements GLSurfaceView.Render
     private PreviewCallback mPrevCb;
     private CameraCallbacksHandler cameraCallbacksHandler = new CameraCallbacksHandler();
     private boolean NoPreview = true;
+    private int CustomRotate = -1;
+    private String FlashMode = Camera.Parameters.FLASH_MODE_OFF;
 
     public SrsCameraView(Context context) {
         this(context, null);
@@ -71,6 +73,17 @@ public class SrsCameraView extends GLSurfaceView implements GLSurfaceView.Render
         setEGLContextClientVersion(2);
         setRenderer(this);
         setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
+    }
+
+    public String getFlashMode() {
+        return FlashMode;
+    }
+    public List<String> getSupportedFlashMode() {
+        return mCamera.getParameters().getSupportedFlashModes();
+    }
+
+    public void setFlashMode(String flashMode) {
+        FlashMode = flashMode;
     }
 
     @Override
@@ -224,7 +237,9 @@ public class SrsCameraView extends GLSurfaceView implements GLSurfaceView.Render
         setPreviewOrientation(mPreviewOrientation);
     }
 
-    protected int getRotateDeg() {
+    public int getRotateDeg() {
+        if(CustomRotate >= 0)
+            return CustomRotate;
         try {
             int rotate = ((Activity) getContext()).getWindowManager().getDefaultDisplay().getRotation();
             switch (rotate) {
@@ -242,6 +257,11 @@ public class SrsCameraView extends GLSurfaceView implements GLSurfaceView.Render
         }
 
         return -1;
+    }
+
+    public void setRotateDeg(int r)
+    {
+        CustomRotate = r;
     }
     
     public void setPreviewOrientation(int orientation) {
@@ -342,7 +362,7 @@ public class SrsCameraView extends GLSurfaceView implements GLSurfaceView.Render
         int[] range = adaptFpsRange(SrsEncoder.VFPS, params.getSupportedPreviewFpsRange());
         params.setPreviewFpsRange(range[0], range[1]);
         params.setPreviewFormat(ImageFormat.NV21);
-        params.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
+        params.setFlashMode(FlashMode);
         params.setWhiteBalance(Camera.Parameters.WHITE_BALANCE_AUTO);
         params.setSceneMode(Camera.Parameters.SCENE_MODE_AUTO);
         params.setRecordingHint(true);
@@ -371,14 +391,19 @@ public class SrsCameraView extends GLSurfaceView implements GLSurfaceView.Render
         }
 
         cameraCallbacksHandler.onCameraParameters(params);
-        mCamera.setParameters(params);
 
-        mCamera.setDisplayOrientation(mPreviewRotation);
 
         try {
+            mCamera.setParameters(params);
+            mCamera.setDisplayOrientation(mPreviewRotation);
             mCamera.setPreviewTexture(surfaceTexture);
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
+            Log.e("StartCamera " + e.toString(),"@v@");
+            List<String> arr = params.getSupportedFlashModes();
+            for(int i = 0;i < arr.size();++i)
+            {
+                Log.e("SupportedFlashModes " + i +" "+arr.get(i),"@v@");
+            }
         }
         mCamera.startPreview();
 

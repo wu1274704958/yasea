@@ -264,8 +264,8 @@ public class SrsEncoder {
         vPortraitHeight = width;
     }
 
-    public void setVideoHDMode() {
-        vBitrate = 1200 * 1024;  // 1200 kbps
+    public void setVideoHDMode(int bitRate) {
+        vBitrate = bitRate * 1024;  // 1200 kbps
         x264Preset = "veryfast";
     }
 

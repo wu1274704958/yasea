@@ -11,6 +11,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Message;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
@@ -43,6 +44,7 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Method;
 import java.net.SocketException;
 import java.util.Random;
 
@@ -88,8 +90,6 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
         // response screen rotation event
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
-        requestPermission();
-
         myHandle = new MyHandle(this);
         agent = new RemoteCamAgent(this,myHandle);
         agent.registe();
@@ -99,6 +99,8 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
                 agent.sendLog("error : " + code,0);
             }
         });
+
+        requestPermission();
     }
 
     private void requestPermission() {
@@ -210,6 +212,7 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
                 }
             }
         });
+        agent.launch(GetSavedCmd(CMD_SAVE_TAG));
     }
 
     private void initPublisher() {
@@ -413,10 +416,15 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
+        onOrientationChanged(newConfig.orientation);
+
+    }
+    private void onOrientationChanged(int orientation)
+    {
         mPublisher.stopEncode();
         mPublisher.stopRecord();
         btnRecord.setText("record");
-        mPublisher.setScreenOrientation(newConfig.orientation);
+        mPublisher.setScreenOrientation(orientation);
         if (btnPublish.getText().toString().contentEquals("stop")) {
             mPublisher.startEncode();
             mPublisher.startCamera();
@@ -620,6 +628,9 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
             object.put("pause_st",btnPause.getText());
             object.put("w",mWidth);
             object.put("h",mHeight);
+            object.put("rot",mCameraView.getRotateDeg());
+            object.put("flash",mCameraView.getFlashMode());
+            object.put("bit_rate",mPublisher.getmBitRate());
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -694,6 +705,26 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
                 try {
                     int a = Integer.parseInt(val);
                     mHeight = a;
+                }catch (Exception e)
+                {
+                    log(e.getMessage());
+                }
+            case "rot":
+                try {
+                    int a = Integer.parseInt(val);
+                    mCameraView.setRotateDeg(a);
+                    onOrientationChanged(Configuration.ORIENTATION_LANDSCAPE);
+                }catch (Exception e)
+                {
+                    log(e.getMessage());
+                }
+            case "flash":
+                FlashlightManager.switchFlashlight(val.equals("on"));
+                break;
+            case "bit_rate":
+                try {
+                    int a = Integer.parseInt(val);
+                    mPublisher.setmBitRate(a);
                 }catch (Exception e)
                 {
                     log(e.getMessage());
