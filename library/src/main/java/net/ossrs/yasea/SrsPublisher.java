@@ -41,7 +41,7 @@ public class SrsPublisher {
         this.mBitRate = mBitRate;
     }
 
-    private int mBitRate = 1200;
+    private int mBitRate = 4800;
 
     public SrsPublisher(SrsCameraView view) {
         mCameraView = view;

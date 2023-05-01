@@ -7,6 +7,7 @@ import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.hardware.Camera;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -631,11 +632,26 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
             object.put("rot",mCameraView.getRotateDeg());
             object.put("flash",mCameraView.getFlashMode());
             object.put("bit_rate",mPublisher.getmBitRate());
+            object.put("battery",getBattery());
         } catch (JSONException e) {
             e.printStackTrace();
         }
         return object.toString();
     }
+
+    private int getBattery() {
+        BatteryManager mBatteryManager = null;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            mBatteryManager = (BatteryManager) getSystemService(BATTERY_SERVICE);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            if (mBatteryManager != null) {
+                return mBatteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+            }
+        }
+        return -1;
+    }
+
     public void exec_cmd(final String cmd)
     {
         agent.RunUIThread(new Runnable() {
